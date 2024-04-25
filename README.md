@@ -22,7 +22,7 @@ Due to the necessity in the electrical sector of having a tool to clean up autom
 
 ## Connectedness <a anchor="anchor" id="connectivity"></a>
 
-## Eccentricity and Robustness <a anchor="anchor" id="eccent-robustness"></a>
+## Connectivity ($\kappa$) and Robustness <a anchor="anchor" id="eccent-robustness"></a>
 
 ## Rooted Trees <a anchor="anchor" id="trees"></a>
 

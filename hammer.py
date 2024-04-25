@@ -5,6 +5,7 @@ Playing around with graph theory algorithms.
 For feedback: Mario.Peralta@ieee.org
 """
 import json
+import numpy as np
 import matplotlib.pyplot as plt
 import networkx as nx
 
@@ -61,7 +62,7 @@ def set_network(grid: dict) -> tuple[list]:
     return (nodes_list, edges_list)
 
 
-def build_network(nodes: list, edges: list) -> nx.MultiGraph:
+def build_network(nodes: list, edges: list) -> nx.Graph:
     """Built up a MultiGraph object out of list of nodes and edges.
 
     Parameters
@@ -80,7 +81,7 @@ def build_network(nodes: list, edges: list) -> nx.MultiGraph:
         object.
     """
     # Create a network (MultiGraph)
-    network = nx.MultiGraph()
+    network = nx.Graph()
 
     # Add vertices
     network.add_nodes_from(nodes)
@@ -89,6 +90,11 @@ def build_network(nodes: list, edges: list) -> nx.MultiGraph:
     network.add_edges_from(edges)
 
     return network
+
+
+def adj_matrix() -> np.ndarray:
+    """Return adjacency matrix."""
+    pass
 
 
 def adjacency_dict(graph: dict) -> dict:
@@ -109,7 +115,7 @@ def union(self: list, other: list) -> list:
 
 
 def is_connected(
-        grid_data: dict, first_vertex: int = 14319
+        grid_data: dict, root: int = 14319
 ) -> list:
     """Identify components in the network.
 
@@ -122,6 +128,9 @@ def is_connected(
     grid_data : dict
         Electrical grid database.
 
+    root : int
+        First vertex.
+
     Returns
     -------
     cloud : list
@@ -131,32 +140,27 @@ def is_connected(
         there is only one component, the network itself, hence
         the network is connected.
     """
-    visited_list = []
-    visited_list.append(first_vertex)
+    path_track = []
+    path_track.append(root)
     adj_dict = adjacency_dict(grid_data)
-    for vertex in visited_list:
+    for vertex in path_track:
         adj_vertices = adj_dict[vertex]
-        union(visited_list, adj_vertices)
+        union(path_track, adj_vertices)
 
     cloud = []
-    if len(visited_list) != len(adj_dict):
+    if len(path_track) != len(adj_dict):
         for v in adj_dict:
-            if v not in visited_list:
+            if v not in path_track:
                 cloud.append(v)
 
     return cloud
 
 
-def run_connectedness():
+def run_connectedness() -> list:
     """Run test."""
     grid_data = load_grid("../data/network.json")
-    components = is_connected(grid_data, first_vertex=14319)
-    if not components:
-        print("Electrical grid connected.")
-    else:
-        print("Electrical grid not connected.")
-        print("Vertices of the cloud:")
-        print(components)
+    components = is_connected(grid_data, root=14319)
+    return components
 
 
 def split_cloud():
@@ -164,13 +168,11 @@ def split_cloud():
     pass
 
 
-def is_tree():
-    """Verify if the network is a Tree kind of graph."""
-    pass
+def leaves():
+    """Verify loads has only one conductor connected.
 
-
-def is_forest():
-    """Verify if a rooted tree has multiple components."""
+    See loads as leaves of a tree kind of graph.
+    """
     pass
 
 
@@ -184,9 +186,58 @@ def shortest_path():
     pass
 
 
-def has_cycle():
-    """Idefify if a close trail is possible."""
-    pass
+def get_cycles(
+        grid_data: dict, root: int = 14319
+) -> list[list]:
+    """Find and eeturn list of cycles basis.
+
+    Let a "ring" be a kind of cycle basis that has the root.
+    """
+    spanning_tree: list[tuple] = []   # list of (parent, child)
+    spanning_tree.append((-1, root))
+    adj_dict = adjacency_dict(grid_data)
+    visited: list = [root]
+    odd_edges: list = []
+    cycles: list[list] = []
+    for parent, actual in spanning_tree:
+        goes_to = adj_dict[actual]
+        for child in goes_to:
+            # One solely parent
+            if (child, actual) in spanning_tree:
+                continue
+            # End point already visited
+            if child in visited:
+                if (child, actual) in odd_edges:
+                    continue
+                odd_edges.append((actual, child))
+                continue
+            visited.append(child)
+            spanning_tree.append((actual, child))
+
+    spanning_dict = {child: parent for (parent, child) in spanning_tree}
+    for u, v in odd_edges:
+        cycle = [u]
+        u_parent = spanning_dict[u]
+        comming_from = -1
+        ring = False
+        while u_parent != comming_from and not ring:
+            comming_from = v
+            v = spanning_dict[comming_from]
+            cycle.append(comming_from)
+            # All the way back to the root type of cycle
+            if comming_from == root:
+                ring = True
+
+        # The other half
+        if ring:
+            half_cycle = []
+            while u_parent not in cycle:
+                half_cycle.append(u_parent)
+                u_parent = spanning_dict[u_parent]
+            cycle += half_cycle
+        cycles.append(cycle)
+
+    return spanning_tree, cycles
 
 
 def main():
@@ -210,6 +261,13 @@ def main():
     plt.show()
 
 
+def run_cycle() -> tuple[list]:
+    """Run test of cycles basis."""
+    grid_data = load_grid("../data/network.json")
+    spanning_tree, cycles = get_cycles(grid_data, root=14319)
+    return spanning_tree, cycles
+
+
 if __name__ == "__main__":
-    main()
-    run_connectedness()
+    components = run_connectedness()
+    spanning_tree, cycles = run_cycle()
